@@ -5,48 +5,8 @@ import Link from "next/link";
 import api from "../lib/api";
 import { Property } from "../lib/types";
 import Layout from "../components/Layout";
-import PropertyCard from "../components/PropertyCard";
-
-// 카테고리 정보 타입
-interface CategoryInfo {
-  key: string;
-  name: string;
-  emoji: string;
-  description: string;
-  color: string;
-}
-
-// 카테고리 목록
-const CATEGORIES: CategoryInfo[] = [
-  {
-    key: "COMMERCIAL",
-    name: "상가",
-    emoji: "🏪", 
-    description: "상가, 사무실",
-    color: "#e67e22"
-  },
-  {
-    key: "RESIDENTIAL", 
-    name: "아파트·주택",
-    emoji: "🏠",
-    description: "아파트, 빌라, 원룸, 투룸, 오피스텔",
-    color: "#3498db"
-  },
-  {
-    key: "INDUSTRIAL",
-    name: "공장·창고", 
-    emoji: "🏭",
-    description: "공장, 창고",
-    color: "#95a5a6"
-  },
-  {
-    key: "LAND",
-    name: "토지",
-    emoji: "🌍",
-    description: "토지",
-    color: "#27ae60"
-  }
-];
+import { HOME_CATEGORIES } from "../lib/categories";
+import CategorySection from "../components/CategorySection";
 
 export default function Home() {
   const [propertiesByCategory, setPropertiesByCategory] = useState<{[key: string]: Property[]}>({});
@@ -56,7 +16,7 @@ export default function Home() {
     const fetchPropertiesByCategory = async () => {
       const categoryData: {[key: string]: Property[]} = {};
       
-      for (const category of CATEGORIES) {
+      for (const category of HOME_CATEGORIES) {
         try {
           const response = await api.get<Property[]>(`/properties/category/${category.key}?limit=8`);
           categoryData[category.key] = response.data; // limit이 서버에서 적용됨
@@ -142,85 +102,14 @@ export default function Home() {
             매물 카테고리별 보기
           </h2>
 
-          {CATEGORIES.map((category) => {
+          {HOME_CATEGORIES.map((category) => {
             const properties = propertiesByCategory[category.key] || [];
-            
-            if (properties.length === 0) {
-              return null; // 해당 카테고리에 매물이 없으면 표시하지 않음
-            }
-
             return (
-              <div key={category.key} style={{ marginBottom: 60 }}>
-                {/* 카테고리 헤더 */}
-                <div style={{ 
-                  display: "flex", 
-                  justifyContent: "space-between", 
-                  alignItems: "center", 
-                  marginBottom: 24 
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <span style={{ fontSize: 32 }}>{category.emoji}</span>
-                    <div>
-                      <h3 style={{ 
-                        fontSize: 24, 
-                        margin: 0, 
-                        color: category.color,
-                        fontWeight: 700
-                      }}>
-                        {category.name}
-                      </h3>
-                      <p style={{ 
-                        fontSize: 14, 
-                        color: "#666", 
-                        margin: 0,
-                        marginTop: 4
-                      }}>
-                        {category.description}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* 매물 더보기 버튼 */}
-                  <Link
-                    href={`/properties?category=${category.key}`}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "8px 16px",
-                      backgroundColor: category.color,
-                      color: "white",
-                      textDecoration: "none",
-                      borderRadius: 6,
-                      fontSize: 14,
-                      fontWeight: 600,
-                      transition: "all 0.2s ease",
-                    }}
-                    onMouseOver={(e) => {
-                      (e.target as HTMLElement).style.opacity = "0.8";
-                    }}
-                    onMouseOut={(e) => {
-                      (e.target as HTMLElement).style.opacity = "1";
-                    }}
-                  >
-                    매물 더보기 →
-                  </Link>
-                </div>
-
-                {/* 매물 그리드 */}
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    flexWrap: "wrap",
-                    justifyContent: "flex-start"
-                  }}
-                >
-                  {properties.map((p) => (
-                    <PropertyCard key={p.id} property={p} variant="home" />
-                  ))}
-                </div>
-              </div>
+              <CategorySection 
+                key={category.key} 
+                category={category} 
+                properties={properties} 
+              />
             );
           })}
 

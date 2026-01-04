@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import api, { API_BASE_URL } from "../../../lib/api";
+import api from "../../../lib/api";
 import { Property, PropertyImage } from "../../../lib/types";
 import Layout from "../../../components/Layout";
 import DealTypeBadge from "../../../components/DealTypeBadge";
 import PriceDisplay from "../../../components/PriceDisplay";
+import PropertyImageGallery from "../../../components/PropertyImageGallery";
 
 export default function PropertyDetail() {
   const params = useParams();
@@ -14,7 +15,6 @@ export default function PropertyDetail() {
   
   const [property, setProperty] = useState<Property | null>(null);
   const [images, setImages] = useState<PropertyImage[]>([]);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,17 +40,6 @@ export default function PropertyDetail() {
     }
   }, [propertyId]);
 
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => 
-      prev === images.length - 1 ? 0 : prev + 1
-    );
-  };
-
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => 
-      prev === 0 ? images.length - 1 : prev - 1
-    );
-  };
 
   if (loading) {
     return (
@@ -104,129 +93,7 @@ export default function PropertyDetail() {
               boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
               marginBottom: 30
             }}>
-              {images.length > 0 ? (
-                <div style={{ position: "relative" }}>
-                  <div style={{ width: "100%", height: 400, position: "relative", overflow: "hidden" }}>
-                    <img
-                      src={`${API_BASE_URL}${images[currentImageIndex].image_url}`}
-                      alt="매물 이미지"
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        display: "block",
-                      }}
-                    />
-                    
-                    {/* Navigation Arrows */}
-                    {images.length > 1 && (
-                      <>
-                        <button
-                          onClick={prevImage}
-                          style={{
-                            position: "absolute",
-                            left: 15,
-                            top: "50%",
-                            transform: "translateY(-50%)",
-                            background: "rgba(0,0,0,0.6)",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "50%",
-                            width: 45,
-                            height: 45,
-                            fontSize: 20,
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          ‹
-                        </button>
-                        
-                        <button
-                          onClick={nextImage}
-                          style={{
-                            position: "absolute",
-                            right: 15,
-                            top: "50%",
-                            transform: "translateY(-50%)",
-                            background: "rgba(0,0,0,0.6)",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "50%",
-                            width: 45,
-                            height: 45,
-                            fontSize: 20,
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          ›
-                        </button>
-                      </>
-                    )}
-                    
-                    {/* Image Counter */}
-                    <div style={{
-                      position: "absolute",
-                      bottom: 15,
-                      right: 15,
-                      background: "rgba(0,0,0,0.7)",
-                      color: "white",
-                      padding: "6px 12px",
-                      borderRadius: 20,
-                      fontSize: 14,
-                    }}>
-                      {currentImageIndex + 1} / {images.length}
-                    </div>
-                  </div>
-                  
-                  {/* Thumbnail Strip */}
-                  {images.length > 1 && (
-                    <div style={{ 
-                      display: "flex", 
-                      gap: 8, 
-                      padding: 15,
-                      overflowX: "auto",
-                      background: "#f8f9fa"
-                    }}>
-                      {images.map((image, index) => (
-                        <img
-                          key={image.id}
-                          src={`${API_BASE_URL}${image.image_url}`}
-                          alt={`썸네일 ${index + 1}`}
-                          style={{
-                            width: 80,
-                            height: 60,
-                            objectFit: "cover",
-                            borderRadius: 6,
-                            cursor: "pointer",
-                            border: index === currentImageIndex ? "2px solid #5ba1b1" : "2px solid transparent",
-                            opacity: index === currentImageIndex ? 1 : 0.7,
-                          }}
-                          onClick={() => setCurrentImageIndex(index)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div style={{
-                  width: "100%",
-                  height: 400,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: "#f5f5f5",
-                  color: "#999",
-                  fontSize: 16,
-                }}>
-                  이미지가 없습니다
-                </div>
-              )}
+              <PropertyImageGallery images={images} height={400} />
             </div>
 
             {/* 매물 정보 섹션 - 이미지 바로 아래 */}

@@ -6,60 +6,13 @@ import api from "../../lib/api";
 import { Property } from "../../lib/types";
 import Layout from "../../components/Layout";
 import PropertyCard from "../../components/PropertyCard";
-
-// 카테고리 정보 타입
-interface CategoryInfo {
-  key: string;
-  name: string;
-  emoji: string;
-  description: string;
-  color: string;
-}
-
-// 카테고리 목록
-const CATEGORIES: CategoryInfo[] = [
-  {
-    key: "ALL",
-    name: "전체",
-    emoji: "🏢", 
-    description: "모든 매물",
-    color: "#34495e"
-  },
-  {
-    key: "COMMERCIAL",
-    name: "상가",
-    emoji: "🏪", 
-    description: "상가, 사무실",
-    color: "#e67e22"
-  },
-  {
-    key: "RESIDENTIAL", 
-    name: "아파트·주택",
-    emoji: "🏠",
-    description: "아파트, 빌라, 원룸, 투룸, 오피스텔",
-    color: "#3498db"
-  },
-  {
-    key: "INDUSTRIAL",
-    name: "공장·창고", 
-    emoji: "🏭",
-    description: "공장, 창고",
-    color: "#95a5a6"
-  },
-  {
-    key: "LAND",
-    name: "토지",
-    emoji: "🌍",
-    description: "토지",
-    color: "#27ae60"
-  }
-];
+import CategoryFilter from "../../components/CategoryFilter";
+import { ALL_CATEGORIES } from "../../lib/categories";
 
 export default function PropertyList() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [isInitialized, setIsInitialized] = useState(false);
-  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
 
   useEffect(() => {
     // 초기화: URL 파라미터 확인 후 데이터 가져오기
@@ -69,7 +22,7 @@ export default function PropertyList() {
       const categoryParam = urlParams.get("category");
       
       let currentCategory = "ALL";
-      if (categoryParam && CATEGORIES.find(c => c.key === categoryParam)) {
+      if (categoryParam && ALL_CATEGORIES.find(c => c.key === categoryParam)) {
         currentCategory = categoryParam;
         setSelectedCategory(categoryParam);
       }
@@ -142,62 +95,11 @@ export default function PropertyList() {
           </div>
 
         {/* 카테고리 필터 */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{
-            display: "flex",
-            gap: 12,
-            flexWrap: "wrap",
-            marginBottom: 16
-          }}>
-            {CATEGORIES.map((category) => {
-              const isSelected = selectedCategory === category.key;
-              const isHovered = hoveredCategory === category.key;
-              
-              return (
-                <button
-                  key={category.key}
-                  onClick={() => setSelectedCategory(category.key)}
-                  onMouseEnter={() => setHoveredCategory(category.key)}
-                  onMouseLeave={() => setHoveredCategory(null)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "10px 16px",
-                    border: `2px solid ${isSelected ? category.color : (isHovered ? category.color : "#e1e5e9")}`,
-                    backgroundColor: isSelected ? category.color : (isHovered ? "#f8f9fa" : "#fff"),
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: isSelected ? 600 : 500,
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <span style={{ 
-                    color: isSelected ? "white" : "#333",
-                    fontWeight: "inherit"
-                  }}>{category.emoji}</span>
-                  <span style={{ 
-                    color: isSelected ? "white" : "#333",
-                    fontWeight: "inherit"
-                  }}>{category.name}</span>
-                </button>
-              );
-            })}
-          </div>
-          
-          {/* 선택된 카테고리 설명 */}
-          {selectedCategory !== "ALL" && (
-            <p style={{ 
-              color: "#666", 
-              fontSize: 14,
-              margin: 0,
-              fontStyle: "italic"
-            }}>
-              {CATEGORIES.find(c => c.key === selectedCategory)?.description} 매물을 보고 있습니다.
-            </p>
-          )}
-        </div>
+        <CategoryFilter
+          categories={ALL_CATEGORIES}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+        />
 
         {properties.length === 0 && (
           <p style={{ color: "#1b1f20ff" }}>현재 등록된 매물이 없습니다.</p>
