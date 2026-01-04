@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { config } from "../lib/config";
 
 export default function Header() {
   return (
@@ -28,7 +29,7 @@ export default function Header() {
             fontWeight: "bold"
           }}
         >
-          베리굿 부동산
+          {config.company.name}
         </Link>
 
         <nav style={{ display: "flex", gap: 20, fontSize: 14, color: "#5ba1b1" }}>
@@ -47,7 +48,7 @@ export default function Header() {
             가격지도
           </Link>
           <a 
-            href="tel:010-1234-5678" 
+            href={`tel:${config.company.phone.replace(/-/g, '')}`}
             style={{ 
               color: "#5ba1b1", 
               textDecoration: "none",

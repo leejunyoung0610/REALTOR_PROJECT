@@ -17,6 +17,7 @@ import PriceDisplay from "../../../components/PriceDisplay";
 import PropertyImageGallery from "../../../components/PropertyImageGallery";
 import LoadingSpinner from "../../../components/LoadingSpinner";
 import ErrorMessage from "../../../components/ErrorMessage";
+import { config } from "../../../lib/config";
 
 export default function PropertyDetail() {
   const params = useParams();
@@ -368,8 +369,8 @@ export default function PropertyDetail() {
               {/* 매물 문의하기 버튼 */}
               <button
                 onClick={() => {
-                  // TODO: 매물 문의 로직 구현 예정
-                  alert('매물 문의 기능은 곧 구현될 예정입니다.');
+                  // 전화 연결 (향후 문의 폼으로 확장 가능)
+                  window.location.href = `tel:${config.company.phone.replace(/-/g, '')}`;
                 }}
                 style={{
                   width: "100%",
@@ -436,13 +437,13 @@ export default function PropertyDetail() {
                   marginBottom: 4, // 5에서 4로 축소
                   fontWeight: 700,
                 }}>
-                  문수진 공인중개사
+                  {config.company.representative} 공인중개사
                 </h3>
                 
                 {/* 전화번호들 */}
                 <div style={{ marginBottom: 12 }}> {/* 16에서 12로 축소 */}
                   <a
-                    href="tel:00000000000"
+                    href={`tel:${config.company.phoneAlt}`}
                     style={{
                       fontSize: 18,
                       color: "#28a745",
@@ -451,11 +452,11 @@ export default function PropertyDetail() {
                       marginRight: 15,
                     }}
                   >
-                    00000000000
+                    {config.company.phoneAlt}
                   </a>
                   <span style={{ color: "#666", fontSize: 16 }}>|</span>
                   <a
-                    href="tel:01075036000"
+                    href={`tel:${config.company.phone.replace(/-/g, '')}`}
                     style={{
                       fontSize: 18,
                       color: "#28a745",
@@ -464,7 +465,7 @@ export default function PropertyDetail() {
                       marginLeft: 15,
                     }}
                   >
-                    010-7503-6000
+                    {config.company.phone}
                   </a>
                 </div>
               </div>
@@ -483,27 +484,27 @@ export default function PropertyDetail() {
                   marginBottom: 8, // 10에서 8로 축소
                   fontWeight: 600,
                 }}>
-                  배리굿부동산
+                  {config.company.name}
                 </h4>
                 
                 <div style={{ marginBottom: 4 }}> {/* 6에서 4로 축소 */}
                   <span style={{ fontWeight: 500, color: "#555", width: 70, display: "inline-block" }}>대표자</span> {/* width 80에서 70으로 축소 */}
-                  <span>문수진</span>
+                  <span>{config.company.representative}</span>
                 </div>
                 
                 <div style={{ marginBottom: 4 }}> {/* 6에서 4로 축소 */}
                   <span style={{ fontWeight: 500, color: "#555", width: 70, display: "inline-block" }}>소재지</span>
-                  <span>충청남도 천안시 청당동</span>
+                  <span>{config.company.address}</span>
                 </div>
                 
                 <div style={{ marginBottom: 4 }}> {/* 6에서 4로 축소 */}
                   <span style={{ fontWeight: 500, color: "#555", width: 70, display: "inline-block" }}>등록번호</span>
-                  <span>0000-0000-0000</span>
+                  <span>{config.company.registration}</span>
                 </div>
                 
                 <div>
                   <span style={{ fontWeight: 500, color: "#555", width: 70, display: "inline-block" }}>대표번호</span>
-                  <span>000-0000-0000</span>
+                  <span>{config.company.registrationDisplay}</span>
                 </div>
               </div>
 

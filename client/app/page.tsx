@@ -13,6 +13,7 @@ import { Property } from "../lib/types";
 import Layout from "../components/Layout";
 import { HOME_CATEGORIES } from "../lib/categories";
 import CategorySection from "../components/CategorySection";
+import { config } from "../lib/config";
 
 export default function Home() {
   const [propertiesByCategory, setPropertiesByCategory] = useState<{[key: string]: Property[]}>({});
@@ -69,7 +70,7 @@ export default function Home() {
             }}
           >
             <h1 style={{ fontSize: 42, marginBottom: 12 }}>
-              베리굿 부동산
+              {config.company.name}
             </h1>
             <p style={{ fontSize: 18 }}>
               천안 지역 아파트 · 원룸 · 상가 전문 중개

@@ -1,3 +1,5 @@
+import { config } from "../lib/config";
+
 export default function Footer() {
   return (
     <footer
@@ -17,9 +19,9 @@ export default function Footer() {
           padding: "0 20px",
         }}
       >
-        <div style={{ marginBottom: 4, fontWeight: 600 }}>베리굿 부동산</div>
-        <div style={{ marginBottom: 4 }}>충남 천안시 서북구 불당동</div>
-        <div>☎ 010-1234-5678</div>
+        <div style={{ marginBottom: 4, fontWeight: 600 }}>{config.company.name}</div>
+        <div style={{ marginBottom: 4 }}>{config.company.address}</div>
+        <div>☎ {config.company.phone}</div>
       </div>
     </footer>
   );
