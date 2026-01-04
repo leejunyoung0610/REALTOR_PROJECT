@@ -1,3 +1,10 @@
+/**
+ * 매물 상세 페이지
+ * - 이미지 갤러리 (슬라이더)
+ * - 매물 상세 정보
+ * - 가격 및 거래유형 표시
+ * - 회사 정보 및 문의하기
+ */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,6 +15,8 @@ import Layout from "../../../components/Layout";
 import DealTypeBadge from "../../../components/DealTypeBadge";
 import PriceDisplay from "../../../components/PriceDisplay";
 import PropertyImageGallery from "../../../components/PropertyImageGallery";
+import LoadingSpinner from "../../../components/LoadingSpinner";
+import ErrorMessage from "../../../components/ErrorMessage";
 
 export default function PropertyDetail() {
   const params = useParams();
@@ -44,15 +53,7 @@ export default function PropertyDetail() {
   if (loading) {
     return (
       <Layout>
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "center", 
-          alignItems: "center", 
-          minHeight: "50vh",
-          background: "#f8f9fa"
-        }}>
-          <div style={{ fontSize: 18, color: "#666" }}>로딩 중...</div>
-        </div>
+        <LoadingSpinner message="로딩 중..." />
       </Layout>
     );
   }
@@ -60,15 +61,7 @@ export default function PropertyDetail() {
   if (!property) {
     return (
       <Layout>
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "center", 
-          alignItems: "center", 
-          minHeight: "50vh",
-          background: "#f8f9fa"
-        }}>
-          <div style={{ fontSize: 18, color: "#666" }}>매물 정보를 찾을 수 없습니다.</div>
-        </div>
+        <ErrorMessage message="매물 정보를 찾을 수 없습니다." />
       </Layout>
     );
   }

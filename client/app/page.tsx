@@ -1,3 +1,9 @@
+/**
+ * 홈페이지 (메인 페이지)
+ * - Hero 섹션
+ * - 카테고리별 매물 미리보기
+ * - 전체 매물 보기 링크
+ */
 "use client";
 
 import { useEffect, useState } from "react";

@@ -1,3 +1,9 @@
+/**
+ * 매물 목록 페이지
+ * - 카테고리 필터
+ * - 매물 카드 그리드
+ * - URL 파라미터로 카테고리 필터링 지원
+ */
 "use client";
 
 import { useEffect, useState } from "react";
