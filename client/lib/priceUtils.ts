@@ -72,17 +72,15 @@ export function getPriceDisplay(property: Property): PriceDisplayData {
 }
 
 /**
- * 가격을 한국식 표기법으로 포맷 (억, 천만, 백만, 만원 단위)
+ * 가격을 한국식 표기법으로 포맷 (억, 만원 단위)
  * @param value - 가격 값
- * @returns 포맷된 가격 문자열 (예: "3억 5천만원", "1천500만원", "800만원")
+ * @returns 포맷된 가격 문자열 (예: "30억원", "1000만원", "700만원")
  */
 export function formatPrice(value: number): string {
   if (value === 0) return "0원";
   
   const eok = Math.floor(value / 100000000);  // 억 (100,000,000)
-  const cheonman = Math.floor((value % 100000000) / 10000000);  // 천만 (10,000,000)
-  const baekman = Math.floor((value % 10000000) / 1000000);  // 백만 (1,000,000)
-  const man = Math.floor((value % 1000000) / 10000);  // 만 (10,000)
+  const man = Math.floor((value % 100000000) / 10000);  // 만 (10,000)
   const remainder = value % 10000;  // 만원 미만
 
   let result = "";
@@ -90,18 +88,6 @@ export function formatPrice(value: number): string {
   // 억 단위
   if (eok > 0) {
     result += `${eok}억`;
-  }
-  
-  // 천만 단위  
-  if (cheonman > 0) {
-    if (result) result += " ";
-    result += `${cheonman}천만`;
-  }
-  
-  // 백만 단위
-  if (baekman > 0) {
-    if (result) result += " ";
-    result += `${baekman}백만`;
   }
   
   // 만 단위

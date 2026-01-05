@@ -4,9 +4,10 @@ import Footer from "./Footer";
 
 interface LayoutProps {
   children: ReactNode;
+  onConsultationClick?: () => void;
 }
 
-export default function Layout({ children }: LayoutProps) {
+export default function Layout({ children, onConsultationClick }: LayoutProps) {
   return (
     <div style={{ 
       display: "flex", 
@@ -14,7 +15,7 @@ export default function Layout({ children }: LayoutProps) {
       minHeight: "100vh",
       background: "#fff"
     }}>
-      <Header />
+      <Header onConsultationClick={onConsultationClick} />
       <main style={{ flex: 1 }}>
         {children}
       </main>

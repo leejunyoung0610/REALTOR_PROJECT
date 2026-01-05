@@ -1,23 +1,13 @@
-/**
- * 매물 상세 페이지
- * - 이미지 갤러리 (슬라이더)
- * - 매물 상세 정보
- * - 가격 및 거래유형 표시
- * - 회사 정보 및 문의하기
- */
 "use client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import api from "../../../lib/api";
+import api, { API_BASE_URL } from "../../../lib/api";
 import { Property, PropertyImage } from "../../../lib/types";
 import Layout from "../../../components/Layout";
 import DealTypeBadge from "../../../components/DealTypeBadge";
 import PriceDisplay from "../../../components/PriceDisplay";
-import PropertyImageGallery from "../../../components/PropertyImageGallery";
-import LoadingSpinner from "../../../components/LoadingSpinner";
-import ErrorMessage from "../../../components/ErrorMessage";
-import { config } from "../../../lib/config";
+import InquiryModal from "../../../components/InquiryModal";
 
 export default function PropertyDetail() {
   const params = useParams();
@@ -25,7 +15,9 @@ export default function PropertyDetail() {
   
   const [property, setProperty] = useState<Property | null>(null);
   const [images, setImages] = useState<PropertyImage[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchPropertyDetails = async () => {
@@ -50,11 +42,30 @@ export default function PropertyDetail() {
     }
   }, [propertyId]);
 
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => 
+      prev === images.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => 
+      prev === 0 ? images.length - 1 : prev - 1
+    );
+  };
 
   if (loading) {
     return (
       <Layout>
-        <LoadingSpinner message="로딩 중..." />
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "center", 
+          alignItems: "center", 
+          minHeight: "50vh",
+          background: "#f8f9fa"
+        }}>
+          <div style={{ fontSize: 18, color: "#666" }}>로딩 중...</div>
+        </div>
       </Layout>
     );
   }
@@ -62,7 +73,15 @@ export default function PropertyDetail() {
   if (!property) {
     return (
       <Layout>
-        <ErrorMessage message="매물 정보를 찾을 수 없습니다." />
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "center", 
+          alignItems: "center", 
+          minHeight: "50vh",
+          background: "#f8f9fa"
+        }}>
+          <div style={{ fontSize: 18, color: "#666" }}>매물 정보를 찾을 수 없습니다.</div>
+        </div>
       </Layout>
     );
   }
@@ -87,7 +106,129 @@ export default function PropertyDetail() {
               boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
               marginBottom: 30
             }}>
-              <PropertyImageGallery images={images} height={400} />
+              {images.length > 0 ? (
+                <div style={{ position: "relative" }}>
+                  <div style={{ width: "100%", height: 400, position: "relative", overflow: "hidden" }}>
+                    <img
+                      src={`${API_BASE_URL}${images[currentImageIndex].image_url}`}
+                      alt="매물 이미지"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+                    
+                    {/* Navigation Arrows */}
+                    {images.length > 1 && (
+                      <>
+                        <button
+                          onClick={prevImage}
+                          style={{
+                            position: "absolute",
+                            left: 15,
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            background: "rgba(0,0,0,0.6)",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "50%",
+                            width: 45,
+                            height: 45,
+                            fontSize: 20,
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          ‹
+                        </button>
+                        
+                        <button
+                          onClick={nextImage}
+                          style={{
+                            position: "absolute",
+                            right: 15,
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            background: "rgba(0,0,0,0.6)",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "50%",
+                            width: 45,
+                            height: 45,
+                            fontSize: 20,
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          ›
+                        </button>
+                      </>
+                    )}
+                    
+                    {/* Image Counter */}
+                    <div style={{
+                      position: "absolute",
+                      bottom: 15,
+                      right: 15,
+                      background: "rgba(0,0,0,0.7)",
+                      color: "white",
+                      padding: "6px 12px",
+                      borderRadius: 20,
+                      fontSize: 14,
+                    }}>
+                      {currentImageIndex + 1} / {images.length}
+                    </div>
+                  </div>
+                  
+                  {/* Thumbnail Strip */}
+                  {images.length > 1 && (
+                    <div style={{ 
+                      display: "flex", 
+                      gap: 8, 
+                      padding: 15,
+                      overflowX: "auto",
+                      background: "#f8f9fa"
+                    }}>
+                      {images.map((image, index) => (
+                        <img
+                          key={image.id}
+                          src={`${API_BASE_URL}${image.image_url}`}
+                          alt={`썸네일 ${index + 1}`}
+                          style={{
+                            width: 80,
+                            height: 60,
+                            objectFit: "cover",
+                            borderRadius: 6,
+                            cursor: "pointer",
+                            border: index === currentImageIndex ? "2px solid #5ba1b1" : "2px solid transparent",
+                            opacity: index === currentImageIndex ? 1 : 0.7,
+                          }}
+                          onClick={() => setCurrentImageIndex(index)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{
+                  width: "100%",
+                  height: 400,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "#f5f5f5",
+                  color: "#999",
+                  fontSize: 16,
+                }}>
+                  이미지가 없습니다
+                </div>
+              )}
             </div>
 
             {/* 매물 정보 섹션 - 이미지 바로 아래 */}
@@ -368,10 +509,7 @@ export default function PropertyDetail() {
 
               {/* 매물 문의하기 버튼 */}
               <button
-                onClick={() => {
-                  // 전화 연결 (향후 문의 폼으로 확장 가능)
-                  window.location.href = `tel:${config.company.phone.replace(/-/g, '')}`;
-                }}
+                onClick={() => setIsInquiryModalOpen(true)}
                 style={{
                   width: "100%",
                   padding: "12px 20px",
@@ -437,13 +575,13 @@ export default function PropertyDetail() {
                   marginBottom: 4, // 5에서 4로 축소
                   fontWeight: 700,
                 }}>
-                  {config.company.representative} 공인중개사
+                  문수진 공인중개사
                 </h3>
                 
                 {/* 전화번호들 */}
                 <div style={{ marginBottom: 12 }}> {/* 16에서 12로 축소 */}
                   <a
-                    href={`tel:${config.company.phoneAlt}`}
+                    href="tel:00000000000"
                     style={{
                       fontSize: 18,
                       color: "#28a745",
@@ -452,11 +590,11 @@ export default function PropertyDetail() {
                       marginRight: 15,
                     }}
                   >
-                    {config.company.phoneAlt}
+                    00000000000
                   </a>
                   <span style={{ color: "#666", fontSize: 16 }}>|</span>
                   <a
-                    href={`tel:${config.company.phone.replace(/-/g, '')}`}
+                    href="tel:01075036000"
                     style={{
                       fontSize: 18,
                       color: "#28a745",
@@ -465,7 +603,7 @@ export default function PropertyDetail() {
                       marginLeft: 15,
                     }}
                   >
-                    {config.company.phone}
+                    010-7503-6000
                   </a>
                 </div>
               </div>
@@ -484,27 +622,27 @@ export default function PropertyDetail() {
                   marginBottom: 8, // 10에서 8로 축소
                   fontWeight: 600,
                 }}>
-                  {config.company.name}
+                  배리굿부동산
                 </h4>
                 
                 <div style={{ marginBottom: 4 }}> {/* 6에서 4로 축소 */}
                   <span style={{ fontWeight: 500, color: "#555", width: 70, display: "inline-block" }}>대표자</span> {/* width 80에서 70으로 축소 */}
-                  <span>{config.company.representative}</span>
+                  <span>문수진</span>
                 </div>
                 
                 <div style={{ marginBottom: 4 }}> {/* 6에서 4로 축소 */}
                   <span style={{ fontWeight: 500, color: "#555", width: 70, display: "inline-block" }}>소재지</span>
-                  <span>{config.company.address}</span>
+                  <span>충청남도 천안시 청당동</span>
                 </div>
                 
                 <div style={{ marginBottom: 4 }}> {/* 6에서 4로 축소 */}
                   <span style={{ fontWeight: 500, color: "#555", width: 70, display: "inline-block" }}>등록번호</span>
-                  <span>{config.company.registration}</span>
+                  <span>0000-0000-0000</span>
                 </div>
                 
                 <div>
                   <span style={{ fontWeight: 500, color: "#555", width: 70, display: "inline-block" }}>대표번호</span>
-                  <span>{config.company.registrationDisplay}</span>
+                  <span>000-0000-0000</span>
                 </div>
               </div>
 
@@ -514,6 +652,16 @@ export default function PropertyDetail() {
         </div>
       </div>
       </div>
+
+      {/* 문의 모달 */}
+      {property && (
+        <InquiryModal
+          isOpen={isInquiryModalOpen}
+          onClose={() => setIsInquiryModalOpen(false)}
+          propertyId={property.id}
+          mode="create"
+        />
+      )}
     </Layout>
   );
 }

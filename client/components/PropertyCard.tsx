@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { Property } from "../lib/types";
 import { API_BASE_URL } from "../lib/api";
@@ -29,30 +32,30 @@ export default function PropertyCard({ property, variant = "home" }: PropertyCar
     return "https://images.unsplash.com/photo-1560185007-cde436f6a4d0?w=400&h=300&fit=crop";
   };
 
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <Link
       href={`/properties/${property.id}`}
       style={{
         textDecoration: "none",
         color: "#5ba1b1",
-        border: "1px solid #d6d6d6",
-        borderRadius: 10,
+        border: "1px solid #e0e0e0",
+        borderRadius: 12,
         overflow: "hidden",
-        boxShadow: "0 3px 8px rgba(0,0,0,0.12)",
-        transition: "all 0.2s ease",
+        boxShadow: isHovered 
+          ? "0 12px 24px rgba(91, 161, 177, 0.25)" 
+          : "0 4px 12px rgba(0,0,0,0.1)",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         background: "white",
         width: isHomeVariant ? "calc(25% - 9px)" : "calc(25% - 9px)",
         minWidth: "220px",
         flexShrink: 0,
+        transform: isHovered ? "translateY(-8px) scale(1.02)" : "translateY(0) scale(1)",
+        borderColor: isHovered ? "#5ba1b1" : "#e0e0e0",
       }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 15px rgba(0,0,0,0.18)";
-        (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = "0 3px 8px rgba(0,0,0,0.12)";
-        (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {/* 이미지 영역 */}
       <div
@@ -63,6 +66,7 @@ export default function PropertyCard({ property, variant = "home" }: PropertyCar
           borderRadius: isHomeVariant ? 6 : 8,
           background: isHomeVariant ? "#f8f9fa" : "#f5f5f5",
           border: isHomeVariant ? "1px solid #e9ecef" : "none",
+          position: "relative",
         }}
       >
         <img
@@ -73,26 +77,44 @@ export default function PropertyCard({ property, variant = "home" }: PropertyCar
             height: "100%",
             objectFit: "cover",
             display: "block",
+            transform: isHovered ? "scale(1.15)" : "scale(1)",
+            transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
           }}
         />
+        {/* 호버 시 그라데이션 오버레이 */}
+        {isHovered && (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "linear-gradient(to bottom, rgba(91, 161, 177, 0.1), transparent)",
+              pointerEvents: "none",
+            }}
+          />
+        )}
       </div>
 
       {/* 텍스트 영역 */}
       <div style={{ 
-        padding: isHomeVariant ? "8px 10px 8px 10px" : 16,
-        background: "#ffffff",
-        borderTop: isHomeVariant ? "1px solid #f1f3f4" : "none"
+        padding: isHomeVariant ? "12px 14px" : 16,
+        background: isHovered ? "#fafbfc" : "#ffffff",
+        borderTop: isHomeVariant ? "1px solid #f1f3f4" : "none",
+        transition: "background 0.3s ease",
       }}>
         {/* 주소 */}
         <div
           style={{
             fontSize: isHomeVariant ? 14 : 16,
             fontWeight: 600,
-            color: "#111",
+            color: isHovered ? "#2c3e50" : "#111",
             marginBottom: isHomeVariant ? 5 : 12,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
+            transition: "color 0.3s ease",
           }}
         >
           {property.address}

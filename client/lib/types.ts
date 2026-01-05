@@ -42,4 +42,22 @@ export interface PropertyImage {
   created_at: string;
 }
 
+export interface Inquiry {
+  id: number;
+  property_id: number;
+  contact: string;
+  message: string;
+  is_read?: boolean;
+  created_at: string;
+}
+
+export interface Consultation {
+  id: number;
+  name: string;
+  contact: string;
+  message: string;
+  is_read?: boolean;
+  created_at: string;
+}
+
 

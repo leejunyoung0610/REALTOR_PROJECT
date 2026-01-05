@@ -17,8 +17,8 @@ export default function PriceDisplay({
   // 크기별 스타일
   const sizeStyles = {
     small: {
-      fontSize: 12,
-      fontWeight: 600,
+      fontSize: 15,
+      fontWeight: 700,
     },
     medium: {
       fontSize: variant === "simple" ? 13 : 14,

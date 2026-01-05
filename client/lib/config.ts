@@ -17,5 +17,24 @@ export const config = {
     registration: process.env.NEXT_PUBLIC_COMPANY_REGISTRATION || "0000-0000-0000",
     registrationDisplay: process.env.NEXT_PUBLIC_COMPANY_REGISTRATION_DISPLAY || "000-0000-0000",
   },
-} as const;
 
+  // 앱 설정
+  app: {
+    title: "베리굿 부동산",
+    description: "천안 지역 전문 부동산 중개",
+    version: "1.0.0",
+  },
+
+  // 페이지네이션 설정
+  pagination: {
+    itemsPerPage: 12,
+    itemsPerPageHome: 8,
+  },
+
+  // 이미지 설정
+  images: {
+    maxSize: 5 * 1024 * 1024, // 5MB
+    allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'],
+    placeholder: '/placeholder-property.jpg',
+  },
+} as const;

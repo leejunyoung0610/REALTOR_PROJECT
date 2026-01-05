@@ -1,15 +1,8 @@
-/**
- * 매물 등록 페이지 (관리자)
- * - 매물 정보 입력 폼
- * - 이미지 업로드
- * - 카테고리별 매물 종류 선택
- */
 "use client";
 
 import React from "react";
 import api from "../../../../lib/api";
 import ImageUpload from "../../../components/ImageUpload";
-import PropertyFormField from "../../../../components/PropertyFormField";
 
 export default function NewProperty() {
   const [selectedImages, setSelectedImages] = React.useState<FileList | null>(null);
@@ -265,13 +258,31 @@ export default function NewProperty() {
             </div>
 
             {/* 주소 */}
-            <PropertyFormField
-              label="주소"
-              name="address"
-              type="text"
-              placeholder="예: 충남 천안시 서북구 불당동 123-45"
-              required
-            />
+            <div style={{ marginBottom: 25 }}>
+              <label style={{ 
+                display: "block", 
+                marginBottom: 8, 
+                fontWeight: 600,
+                color: "#2c3e50"
+              }}>
+                주소 *:
+              </label>
+              <input
+                name="address"
+                type="text"
+                placeholder="예: 충남 천안시 서북구 불당동 123-45"
+                required
+                style={{ 
+                  width: "100%", 
+                  padding: "12px 15px", 
+                  border: "2px solid #e1e5e9",
+                  borderRadius: 8,
+                  fontSize: 16,
+                  color: "#2c3e50",
+                  background: "#fff"
+                }}
+              />
+            </div>
 
             {/* 금액 정보 */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 15, marginBottom: 25 }}>
@@ -632,12 +643,31 @@ export default function NewProperty() {
             </div>
 
             {/* 상세 설명 */}
-            <PropertyFormField
-              label="상세 설명"
-              name="description"
-              type="textarea"
-              placeholder="매물에 대한 상세한 설명을 입력해주세요..."
-            />
+            <div style={{ marginBottom: 30 }}>
+              <label style={{ 
+                display: "block", 
+                marginBottom: 8, 
+                fontWeight: 600,
+                color: "#2c3e50"
+              }}>
+                상세 설명:
+              </label>
+              <textarea
+                name="description"
+                placeholder="매물에 대한 상세한 설명을 입력해주세요..."
+                style={{ 
+                  width: "100%", 
+                  padding: "12px 15px", 
+                  border: "2px solid #e1e5e9",
+                  borderRadius: 8,
+                  minHeight: 120,
+                  fontSize: 16,
+                  color: "#2c3e50",
+                  background: "#fff",
+                  resize: "vertical"
+                }}
+              />
+            </div>
 
             <ImageUpload
               selectedImages={selectedImages}

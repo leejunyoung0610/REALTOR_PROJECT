@@ -1,16 +1,9 @@
-/**
- * 매물 수정 페이지 (관리자)
- * - 매물 정보 수정 폼
- * - 이미지 관리 (업로드/삭제/대표이미지 설정)
- * - 매물 삭제 기능
- */
 "use client";
 
 import React, { useEffect, useState } from "react";
 import api from "../../../../lib/api";
 import { Property, PropertyImage } from "../../../../lib/types";
 import ImageUpload from "../../../components/ImageUpload";
-import LoadingSpinner from "../../../../components/LoadingSpinner";
 
 export default function EditProperty({
   params,
@@ -201,10 +194,12 @@ export default function EditProperty({
 
   if (!data) return (
     <div style={{ 
-      background: "#f8f9fa", 
-      minHeight: "100vh"
+      background: "#fff", 
+      minHeight: "100vh", 
+      padding: 20, 
+      color: "#333" 
     }}>
-      <LoadingSpinner message="로딩 중..." />
+      로딩중...
     </div>
   );
 

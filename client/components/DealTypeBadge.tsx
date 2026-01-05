@@ -26,10 +26,10 @@ export default function DealTypeBadge({
   // 크기별 스타일
   const sizeStyles = {
     small: {
-      padding: "4px 7px",
-      fontSize: 11,
-      minWidth: 34,
-      height: 22,
+      padding: "5px 9px",
+      fontSize: 13,
+      minWidth: 38,
+      height: 26,
       borderRadius: 4,
     },
     medium: {

@@ -1,7 +1,12 @@
-import Link from "next/link";
-import { config } from "../lib/config";
+"use client";
 
-export default function Header() {
+import Link from "next/link";
+
+interface HeaderProps {
+  onConsultationClick?: () => void;
+}
+
+export default function Header({ onConsultationClick }: HeaderProps) {
   return (
     <header
       style={{
@@ -29,7 +34,7 @@ export default function Header() {
             fontWeight: "bold"
           }}
         >
-          {config.company.name}
+          베리굿 부동산
         </Link>
 
         <nav style={{ display: "flex", gap: 20, fontSize: 14, color: "#5ba1b1" }}>
@@ -40,15 +45,29 @@ export default function Header() {
           }}>
             매물보기
           </Link>
-          <Link href="/map" style={{ 
-            color: "#5ba1b1", 
-            textDecoration: "none",
-            transition: "color 0.2s ease" 
-          }}>
-            가격지도
-          </Link>
+          <button
+            onClick={onConsultationClick}
+            style={{ 
+              color: "#5ba1b1", 
+              textDecoration: "none",
+              transition: "color 0.2s ease",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontSize: 14,
+              padding: 0
+            }}
+            onMouseOver={(e) => {
+              (e.currentTarget as HTMLElement).style.color = "#4a8a99";
+            }}
+            onMouseOut={(e) => {
+              (e.currentTarget as HTMLElement).style.color = "#5ba1b1";
+            }}
+          >
+            간편상담
+          </button>
           <a 
-            href={`tel:${config.company.phone.replace(/-/g, '')}`}
+            href="tel:010-1234-5678" 
             style={{ 
               color: "#5ba1b1", 
               textDecoration: "none",

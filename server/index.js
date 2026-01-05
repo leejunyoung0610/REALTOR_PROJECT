@@ -214,7 +214,7 @@ app.get("/properties/featured", async (req, res) => {
 // 카테고리별 매물 조회 (메인 페이지용)
 app.get("/properties/category/:category", async (req, res) => {
   const { category } = req.params;
-  const { limit } = req.query; // limit 쿼리 파라미터 추가
+  const { limit, featured } = req.query; // limit, featured 쿼리 파라미터 추가
   
   try {
     let query = `
@@ -226,14 +226,21 @@ app.get("/properties/category/:category", async (req, res) => {
          LIMIT 1) AS main_image
       FROM property p
       WHERE p.category = $1 AND p.status = '거래중'
-      ORDER BY p.created_at DESC
     `;
     
     const params = [category];
+    let paramIndex = 2;
+    
+    // featured가 true인 경우 추천매물만 필터링
+    if (featured === 'true') {
+      query += ` AND p.is_featured = true`;
+    }
+    
+    query += ` ORDER BY p.created_at DESC`;
     
     // limit이 제공된 경우에만 LIMIT 추가
     if (limit) {
-      query += ` LIMIT $2`;
+      query += ` LIMIT $${paramIndex}`;
       params.push(parseInt(limit));
     }
     // limit이 없으면 전체 반환 (매물 더보기 페이지용)
@@ -529,15 +536,28 @@ app.patch("/properties/:id/featured", async (req, res) => {
   const { is_featured } = req.body;
 
   try {
-    // 추천매물로 설정하려는 경우, 현재 추천매물 개수 확인
+    // 먼저 매물 정보 가져오기 (카테고리 확인용)
+    const propertyResult = await pool.query(
+      "SELECT category FROM property WHERE id = $1",
+      [id]
+    );
+
+    if (propertyResult.rows.length === 0) {
+      return res.status(404).json({ error: "매물 없음" });
+    }
+
+    const category = propertyResult.rows[0].category;
+
+    // 추천매물로 설정하려는 경우, 해당 카테고리 내 추천매물 개수 확인
     if (is_featured) {
       const featuredCount = await pool.query(
-        "SELECT COUNT(*) as count FROM property WHERE is_featured = true"
+        "SELECT COUNT(*) as count FROM property WHERE is_featured = true AND category = $1",
+        [category]
       );
       
       if (parseInt(featuredCount.rows[0].count) >= 8) {
         return res.status(400).json({ 
-          error: "추천매물은 최대 8개까지만 설정할 수 있습니다." 
+          error: "해당 카테고리의 추천매물은 최대 8개까지만 설정할 수 있습니다." 
         });
       }
     }
@@ -743,6 +763,699 @@ app.get("/properties/:id", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "매물 조회 실패" });
+  }
+});
+
+// ===== 문의 관련 API =====
+
+// 문의 테이블 생성 (서버 시작 시 자동 생성)
+const createInquiryTable = async () => {
+  try {
+    // 먼저 테이블이 존재하는지 확인
+    const tableExists = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'inquiry'
+      );
+    `);
+
+    if (tableExists.rows[0].exists) {
+      console.log("inquiry 테이블이 이미 존재함. 컬럼 확인 중...");
+      
+      // 컬럼 존재 여부 확인
+      const columns = await pool.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'inquiry'
+      `);
+      
+      console.log("현재 inquiry 테이블 컬럼:", columns.rows.map(r => r.column_name));
+      
+      const columnNames = columns.rows.map(r => r.column_name);
+      
+      // contact 컬럼이 없으면 추가
+      if (!columnNames.includes('contact')) {
+        console.log("contact 컬럼이 없어서 추가 중...");
+        try {
+          // 먼저 NULL 허용으로 추가
+          await pool.query(`
+            ALTER TABLE inquiry 
+            ADD COLUMN contact VARCHAR(50)
+          `);
+          // 기존 데이터가 있으면 빈 문자열로 업데이트
+          await pool.query(`
+            UPDATE inquiry SET contact = '' WHERE contact IS NULL
+          `);
+          // NOT NULL 제약조건 추가
+          await pool.query(`
+            ALTER TABLE inquiry 
+            ALTER COLUMN contact SET NOT NULL
+          `);
+          console.log("contact 컬럼 추가 완료");
+        } catch (alterErr) {
+          console.error("contact 컬럼 추가 실패:", alterErr.message);
+        }
+      }
+      
+      // message 컬럼이 없으면 추가
+      if (!columnNames.includes('message')) {
+        console.log("message 컬럼이 없어서 추가 중...");
+        try {
+          await pool.query(`
+            ALTER TABLE inquiry 
+            ADD COLUMN message TEXT
+          `);
+          await pool.query(`
+            UPDATE inquiry SET message = '' WHERE message IS NULL
+          `);
+          await pool.query(`
+            ALTER TABLE inquiry 
+            ALTER COLUMN message SET NOT NULL
+          `);
+          console.log("message 컬럼 추가 완료");
+        } catch (alterErr) {
+          console.error("message 컬럼 추가 실패:", alterErr.message);
+        }
+      }
+      
+      // property_id 컬럼이 없으면 추가
+      if (!columnNames.includes('property_id')) {
+        console.log("property_id 컬럼이 없어서 추가 중...");
+        try {
+          await pool.query(`
+            ALTER TABLE inquiry 
+            ADD COLUMN property_id INTEGER
+          `);
+          await pool.query(`
+            UPDATE inquiry SET property_id = 0 WHERE property_id IS NULL
+          `);
+          await pool.query(`
+            ALTER TABLE inquiry 
+            ALTER COLUMN property_id SET NOT NULL
+          `);
+          console.log("property_id 컬럼 추가 완료");
+        } catch (alterErr) {
+          console.error("property_id 컬럼 추가 실패:", alterErr.message);
+        }
+      }
+      
+      // is_read 컬럼이 없으면 추가
+      if (!columnNames.includes('is_read')) {
+        console.log("is_read 컬럼이 없어서 추가 중...");
+        try {
+          await pool.query(`
+            ALTER TABLE inquiry 
+            ADD COLUMN is_read BOOLEAN DEFAULT false
+          `);
+          await pool.query(`
+            UPDATE inquiry SET is_read = false WHERE is_read IS NULL
+          `);
+          console.log("is_read 컬럼 추가 완료");
+        } catch (alterErr) {
+          console.error("is_read 컬럼 추가 실패:", alterErr.message);
+        }
+      }
+      
+      // Foreign key가 없으면 추가 (property_id가 있을 때만)
+      if (columnNames.includes('property_id')) {
+        try {
+          await pool.query(`
+            DO $$
+            BEGIN
+              IF NOT EXISTS (
+                SELECT 1 FROM pg_constraint 
+                WHERE conname = 'inquiry_property_id_fkey'
+              ) THEN
+                ALTER TABLE inquiry 
+                ADD CONSTRAINT inquiry_property_id_fkey 
+                FOREIGN KEY (property_id) REFERENCES property(id) ON DELETE CASCADE;
+              END IF;
+            END $$;
+          `);
+          console.log("Foreign key 제약조건 확인 완료");
+        } catch (fkErr) {
+          console.log("Foreign key 제약조건 추가 중 오류 (무시 가능):", fkErr.message);
+        }
+      }
+      
+      console.log("inquiry 테이블 구조 확인/수정 완료");
+    } else {
+      // 테이블이 없으면 새로 생성
+      console.log("inquiry 테이블이 없어서 생성 중...");
+      await pool.query(`
+        CREATE TABLE inquiry (
+          id SERIAL PRIMARY KEY,
+          property_id INTEGER NOT NULL REFERENCES property(id) ON DELETE CASCADE,
+          contact VARCHAR(50) NOT NULL,
+          message TEXT NOT NULL,
+          is_read BOOLEAN DEFAULT false,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log("inquiry 테이블 생성 완료");
+    }
+  } catch (err) {
+    console.error("inquiry 테이블 생성/수정 에러:", err);
+    console.error("에러 상세:", err.message);
+    console.error("에러 스택:", err.stack);
+  }
+};
+
+// 서버 시작 시 테이블 생성 (비동기 처리)
+(async () => {
+  await createInquiryTable();
+})();
+
+// 전화번호 형식 검증 함수
+const validatePhoneNumber = (phone) => {
+  // 하이픈 제거한 숫자만 추출
+  const numbersOnly = phone.replace(/-/g, "");
+  
+  // 숫자만 있는지 확인
+  if (!/^\d+$/.test(numbersOnly)) {
+    return false;
+  }
+  
+  // 한국 전화번호 형식 검증
+  // 휴대폰: 010, 011, 016, 017, 018, 019로 시작하는 10-11자리
+  // 지역번호: 02(서울), 031(경기), 032(인천), 033(강원), 041(충남), 042(대전), 043(충북), 044(세종), 051(부산), 052(울산), 053(대구), 054(경북), 055(경남), 061(전남), 062(광주), 063(전북), 064(제주)
+  const mobilePattern = /^(010|011|016|017|018|019)\d{7,8}$/;
+  const landlinePattern = /^(02|031|032|033|041|042|043|044|051|052|053|054|055|061|062|063|064)\d{6,8}$/;
+  
+  return mobilePattern.test(numbersOnly) || landlinePattern.test(numbersOnly);
+};
+
+// 문의 생성
+app.post("/inquiries", async (req, res) => {
+  console.log("=== POST /inquiries 요청 받음 ===");
+  console.log("Request body:", JSON.stringify(req.body, null, 2));
+  
+  const { property_id, contact, message } = req.body;
+
+  if (!property_id || !contact || !message) {
+    console.log("필수 값 누락:", { property_id, contact, message });
+    return res.status(400).json({ error: "필수 값 누락 (property_id, contact, message)" });
+  }
+
+  // 전화번호 형식 검증
+  if (!validatePhoneNumber(contact.trim())) {
+    console.log("전화번호 형식이 올바르지 않음:", contact);
+    return res.status(400).json({ 
+      error: "올바른 전화번호 형식을 입력해주세요. 예: 010-1234-5678, 02-1234-5678" 
+    });
+  }
+
+  // property_id를 숫자로 변환
+  const propertyIdNum = parseInt(property_id);
+  if (isNaN(propertyIdNum)) {
+    console.log("property_id가 유효한 숫자가 아님:", property_id);
+    return res.status(400).json({ error: "property_id는 유효한 숫자여야 합니다." });
+  }
+
+  try {
+    // inquiry 테이블 존재 여부 확인 (없으면 생성 시도)
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'inquiry'
+      );
+    `);
+    
+    if (!tableCheck.rows[0].exists) {
+      console.log("inquiry 테이블이 없음. 생성 시도...");
+      await createInquiryTable();
+    }
+
+    // 매물 존재 여부 확인
+    const propertyCheck = await pool.query(
+      "SELECT id FROM property WHERE id = $1",
+      [propertyIdNum]
+    );
+
+    if (propertyCheck.rows.length === 0) {
+      console.log("매물이 존재하지 않음:", propertyIdNum);
+      return res.status(404).json({ error: "매물을 찾을 수 없습니다." });
+    }
+
+    console.log("문의 생성 시도:", { propertyIdNum, contact, message });
+    const result = await pool.query(
+      `
+      INSERT INTO inquiry (property_id, contact, message)
+      VALUES ($1, $2, $3)
+      RETURNING *
+      `,
+      [propertyIdNum, contact.trim(), message.trim()]
+    );
+
+    console.log("문의 생성 성공:", result.rows[0]);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("========== 문의 생성 에러 발생 ==========");
+    console.error("에러 타입:", err.constructor.name);
+    console.error("에러 메시지:", err.message);
+    console.error("에러 코드:", err.code);
+    console.error("에러 상세:", err.detail);
+    console.error("에러 스택:", err.stack);
+    console.error("==========================================");
+    
+    // PostgreSQL 에러 코드별 처리
+    if (err.code === '42P01') {
+      // 테이블이 존재하지 않음
+      console.log("테이블이 없어서 생성 시도...");
+      try {
+        await createInquiryTable();
+        // 재시도
+        const retryResult = await pool.query(
+          `INSERT INTO inquiry (property_id, contact, message) VALUES ($1, $2, $3) RETURNING *`,
+          [propertyIdNum, contact.trim(), message.trim()]
+        );
+        console.log("재시도 성공!");
+        return res.status(201).json(retryResult.rows[0]);
+      } catch (retryErr) {
+        console.error("재시도 실패:", retryErr);
+        return res.status(500).json({ 
+          error: "문의 생성 실패 (테이블 생성 후 재시도 실패)",
+          details: retryErr.message,
+          code: retryErr.code
+        });
+      }
+    } else if (err.code === '23503') {
+      // Foreign key violation
+      console.log("Foreign Key 위반 - 매물이 존재하지 않음");
+      return res.status(400).json({ 
+        error: "존재하지 않는 매물입니다.",
+        details: err.detail || err.message,
+        code: err.code
+      });
+    } else if (err.code === '23502') {
+      // NOT NULL violation
+      console.log("NOT NULL 위반 - 필수 필드 누락");
+      return res.status(400).json({ 
+        error: "필수 필드가 누락되었습니다.",
+        details: err.detail || err.message,
+        code: err.code
+      });
+    } else if (err.code === '23505') {
+      // Unique violation
+      return res.status(400).json({ 
+        error: "중복된 데이터입니다.",
+        details: err.detail || err.message,
+        code: err.code
+      });
+    }
+    
+    // 기타 에러
+    res.status(500).json({ 
+      error: "문의 생성 실패",
+      details: err.message || "알 수 없는 오류가 발생했습니다.",
+      code: err.code || "UNKNOWN",
+      type: err.constructor.name
+    });
+  }
+});
+
+// 매물별 문의 목록 조회
+app.get("/inquiries/property/:propertyId", async (req, res) => {
+  const { propertyId } = req.params;
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT * FROM inquiry
+      WHERE property_id = $1
+      ORDER BY created_at DESC
+      `,
+      [propertyId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("문의 목록 조회 에러:", err);
+    res.status(500).json({ error: "문의 목록 조회 실패" });
+  }
+});
+
+// 문의 상세 조회 (자동으로 읽음 처리)
+app.get("/inquiries/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM inquiry WHERE id = $1",
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "문의 없음" });
+    }
+
+    // 읽지 않은 문의면 자동으로 읽음 처리
+    if (!result.rows[0].is_read) {
+      await pool.query(
+        "UPDATE inquiry SET is_read = true WHERE id = $1",
+        [id]
+      );
+      result.rows[0].is_read = true;
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("문의 조회 에러:", err);
+    res.status(500).json({ error: "문의 조회 실패" });
+  }
+});
+
+// 매물별 문의 개수 조회 (관리자 페이지용)
+app.get("/inquiries/property/:propertyId/count", async (req, res) => {
+  const { propertyId } = req.params;
+
+  try {
+    const result = await pool.query(
+      "SELECT COUNT(*) as count FROM inquiry WHERE property_id = $1",
+      [propertyId]
+    );
+    
+    // 안읽은 문의 개수도 함께 반환
+    const unreadResult = await pool.query(
+      "SELECT COUNT(*) as count FROM inquiry WHERE property_id = $1 AND (is_read IS NULL OR is_read = false)",
+      [propertyId]
+    );
+
+    res.json({ 
+      count: parseInt(result.rows[0].count),
+      unreadCount: parseInt(unreadResult.rows[0].count)
+    });
+  } catch (err) {
+    console.error("문의 개수 조회 에러:", err);
+    res.status(500).json({ error: "문의 개수 조회 실패" });
+  }
+});
+
+// 문의 읽음 처리
+app.patch("/inquiries/:id/read", async (req, res) => {
+  const { id } = req.params;
+  const { is_read } = req.body;
+
+  try {
+    const result = await pool.query(
+      `
+      UPDATE inquiry
+      SET is_read = $1
+      WHERE id = $2
+      RETURNING *
+      `,
+      [is_read !== undefined ? is_read : true, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "문의 없음" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("문의 읽음 처리 에러:", err);
+    res.status(500).json({ error: "문의 읽음 처리 실패" });
+  }
+});
+
+// 문의 삭제
+app.delete("/inquiries/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      "DELETE FROM inquiry WHERE id = $1 RETURNING *",
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "문의 없음" });
+    }
+
+    res.json({ message: "문의 삭제 완료" });
+  } catch (err) {
+    console.error("문의 삭제 에러:", err);
+    res.status(500).json({ error: "문의 삭제 실패" });
+  }
+});
+
+// ===== 간편 상담 문의 관련 API =====
+
+// 상담 문의 테이블 생성
+const createConsultationTable = async () => {
+  try {
+    const tableExists = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'consultation'
+      );
+    `);
+
+    if (tableExists.rows[0].exists) {
+      console.log("consultation 테이블이 이미 존재함. 컬럼 확인 중...");
+      
+      const columns = await pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'consultation'
+      `);
+      
+      const columnNames = columns.rows.map(r => r.column_name);
+      
+      // name 컬럼이 없으면 추가
+      if (!columnNames.includes('name')) {
+        await pool.query(`
+          ALTER TABLE consultation 
+          ADD COLUMN name VARCHAR(50)
+        `);
+        await pool.query(`UPDATE consultation SET name = '' WHERE name IS NULL`);
+        await pool.query(`ALTER TABLE consultation ALTER COLUMN name SET NOT NULL`);
+        console.log("name 컬럼 추가 완료");
+      }
+      
+      // contact 컬럼이 없으면 추가
+      if (!columnNames.includes('contact')) {
+        await pool.query(`ALTER TABLE consultation ADD COLUMN contact VARCHAR(50)`);
+        await pool.query(`UPDATE consultation SET contact = '' WHERE contact IS NULL`);
+        await pool.query(`ALTER TABLE consultation ALTER COLUMN contact SET NOT NULL`);
+        console.log("contact 컬럼 추가 완료");
+      }
+      
+      // message 컬럼이 없으면 추가
+      if (!columnNames.includes('message')) {
+        await pool.query(`ALTER TABLE consultation ADD COLUMN message TEXT`);
+        await pool.query(`UPDATE consultation SET message = '' WHERE message IS NULL`);
+        await pool.query(`ALTER TABLE consultation ALTER COLUMN message SET NOT NULL`);
+        console.log("message 컬럼 추가 완료");
+      }
+      
+      // is_read 컬럼이 없으면 추가
+      if (!columnNames.includes('is_read')) {
+        await pool.query(`ALTER TABLE consultation ADD COLUMN is_read BOOLEAN DEFAULT false`);
+        await pool.query(`UPDATE consultation SET is_read = false WHERE is_read IS NULL`);
+        console.log("is_read 컬럼 추가 완료");
+      }
+      
+      console.log("consultation 테이블 구조 확인/수정 완료");
+    } else {
+      console.log("consultation 테이블이 없어서 생성 중...");
+      await pool.query(`
+        CREATE TABLE consultation (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(50) NOT NULL,
+          contact VARCHAR(50) NOT NULL,
+          message TEXT NOT NULL,
+          is_read BOOLEAN DEFAULT false,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log("consultation 테이블 생성 완료");
+    }
+  } catch (err) {
+    console.error("consultation 테이블 생성/수정 에러:", err);
+  }
+};
+
+// 서버 시작 시 테이블 생성
+(async () => {
+  await createConsultationTable();
+})();
+
+// 전화번호 형식 검증 함수 (재사용)
+const validatePhoneNumberForConsultation = (phone) => {
+  const numbersOnly = phone.replace(/-/g, "");
+  if (!/^\d+$/.test(numbersOnly)) {
+    return false;
+  }
+  const mobilePattern = /^(010|011|016|017|018|019)\d{7,8}$/;
+  const landlinePattern = /^(02|031|032|033|041|042|043|044|051|052|053|054|055|061|062|063|064)\d{6,8}$/;
+  return mobilePattern.test(numbersOnly) || landlinePattern.test(numbersOnly);
+};
+
+// 상담 문의 생성
+app.post("/consultations", async (req, res) => {
+  console.log("=== POST /consultations 요청 받음 ===");
+  console.log("Request body:", JSON.stringify(req.body, null, 2));
+  
+  const { name, contact, message } = req.body;
+
+  if (!name || !contact || !message) {
+    return res.status(400).json({ error: "필수 값 누락 (name, contact, message)" });
+  }
+
+  // 전화번호 형식 검증
+  if (!validatePhoneNumberForConsultation(contact.trim())) {
+    return res.status(400).json({ 
+      error: "올바른 전화번호 형식을 입력해주세요. 예: 010-1234-5678, 02-1234-5678" 
+    });
+  }
+
+  try {
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'consultation'
+      );
+    `);
+    
+    if (!tableCheck.rows[0].exists) {
+      await createConsultationTable();
+    }
+
+    const result = await pool.query(
+      `
+      INSERT INTO consultation (name, contact, message)
+      VALUES ($1, $2, $3)
+      RETURNING *
+      `,
+      [name.trim(), contact.trim(), message.trim()]
+    );
+
+    console.log("상담 문의 생성 성공:", result.rows[0]);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("상담 문의 생성 에러:", err);
+    res.status(500).json({ 
+      error: "상담 문의 생성 실패",
+      details: err.message 
+    });
+  }
+});
+
+// 상담 문의 목록 조회 (관리자용)
+app.get("/consultations", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `
+      SELECT * FROM consultation
+      ORDER BY created_at DESC
+      `
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("상담 문의 목록 조회 에러:", err);
+    res.status(500).json({ error: "상담 문의 목록 조회 실패" });
+  }
+});
+
+// 상담 문의 개수 조회 (관리자 페이지용) - :id 라우트보다 먼저 정의해야 함
+app.get("/consultations/count", async (req, res) => {
+  try {
+    const totalResult = await pool.query("SELECT COUNT(*) as count FROM consultation");
+    const unreadResult = await pool.query(
+      "SELECT COUNT(*) as count FROM consultation WHERE (is_read IS NULL OR is_read = false)"
+    );
+
+    res.json({ 
+      count: parseInt(totalResult.rows[0].count),
+      unreadCount: parseInt(unreadResult.rows[0].count)
+    });
+  } catch (err) {
+    console.error("상담 문의 개수 조회 에러:", err);
+    res.status(500).json({ error: "상담 문의 개수 조회 실패" });
+  }
+});
+
+// 상담 문의 상세 조회 (자동으로 읽음 처리)
+app.get("/consultations/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM consultation WHERE id = $1",
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "상담 문의 없음" });
+    }
+
+    // 읽지 않은 문의면 자동으로 읽음 처리
+    if (!result.rows[0].is_read) {
+      await pool.query(
+        "UPDATE consultation SET is_read = true WHERE id = $1",
+        [id]
+      );
+      result.rows[0].is_read = true;
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("상담 문의 조회 에러:", err);
+    res.status(500).json({ error: "상담 문의 조회 실패" });
+  }
+});
+
+// 상담 문의 읽음 처리
+app.patch("/consultations/:id/read", async (req, res) => {
+  const { id } = req.params;
+  const { is_read } = req.body;
+
+  try {
+    const result = await pool.query(
+      `
+      UPDATE consultation
+      SET is_read = $1
+      WHERE id = $2
+      RETURNING *
+      `,
+      [is_read !== undefined ? is_read : true, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "상담 문의 없음" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("상담 문의 읽음 처리 에러:", err);
+    res.status(500).json({ error: "상담 문의 읽음 처리 실패" });
+  }
+});
+
+// 상담 문의 삭제
+app.delete("/consultations/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      "DELETE FROM consultation WHERE id = $1 RETURNING *",
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "상담 문의 없음" });
+    }
+
+    res.json({ message: "상담 문의 삭제 완료" });
+  } catch (err) {
+    console.error("상담 문의 삭제 에러:", err);
+    res.status(500).json({ error: "상담 문의 삭제 실패" });
   }
 });
 
